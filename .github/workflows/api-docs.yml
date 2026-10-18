@@ -41,7 +41,7 @@ jobs:
         shell: bash
         run: |
           mkdir -p site
-          cp docs/index.html site/index.html
+          cp Wubble.Api/Docs/index.html site/index.html
 
           mapfile -t specs < <(find generated -maxdepth 1 -name '*.json' -type f)
 
