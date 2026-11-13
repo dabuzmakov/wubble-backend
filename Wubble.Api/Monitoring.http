@@ -1,0 +1,73 @@
+# Выполняйте после регистрации, подтверждения email и входа (см. Wubble.Api.http).
+# Вставьте JWT из wubble_access и ID из ответов создания.
+@host = https://localhost:7051
+@accessToken = paste-access-token-here
+@monitorId = 00000000-0000-0000-0000-000000000000
+@checkId = 00000000-0000-0000-0000-000000000000
+
+### Создать Monitor
+POST {{host}}/api/monitors
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "name": "My Shop",
+  "description": "HTTP-мониторинг проекта",
+  "emailNotificationsEnabled": false
+}
+
+### Список Monitor
+GET {{host}}/api/monitors
+Authorization: Bearer {{accessToken}}
+
+### Создать Check на паузе для первого ручного запуска
+POST {{host}}/api/monitors/{{monitorId}}/checks
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "name": "Главная страница",
+  "url": "https://example.com/",
+  "method": "GET",
+  "intervalSeconds": 300,
+  "timeoutSeconds": 10,
+  "expectedStatusCode": 200,
+  "bodyContains": "Example Domain",
+  "failureThreshold": 3,
+  "recoveryThreshold": 1,
+  "isEnabled": false
+}
+
+### Ручной запуск
+POST {{host}}/api/monitors/{{monitorId}}/checks/{{checkId}}/run
+Authorization: Bearer {{accessToken}}
+
+### Включить расписание
+PATCH {{host}}/api/monitors/{{monitorId}}/checks/{{checkId}}/state
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{ "isEnabled": true }
+
+### Текущий статус и расписание
+GET {{host}}/api/monitors/{{monitorId}}/checks/{{checkId}}
+Authorization: Bearer {{accessToken}}
+
+### История
+GET {{host}}/api/monitors/{{monitorId}}/checks/{{checkId}}/results?page=1&pageSize=20
+Authorization: Bearer {{accessToken}}
+
+### Статистика за последние 7 дней
+GET {{host}}/api/monitors/{{monitorId}}/checks/{{checkId}}/statistics
+Authorization: Bearer {{accessToken}}
+
+### Активные инциденты Monitor
+GET {{host}}/api/monitors/{{monitorId}}/incidents?isOpen=true
+Authorization: Bearer {{accessToken}}
+
+### Пауза
+PATCH {{host}}/api/monitors/{{monitorId}}/checks/{{checkId}}/state
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{ "isEnabled": false }
