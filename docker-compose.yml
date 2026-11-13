@@ -1,0 +1,23 @@
+# Локальное окружение для разработки: PostgreSQL + Mailpit (ловушка для писем).
+# Запуск: docker compose up -d
+# Письма смотреть в браузере: http://localhost:8025
+services:
+  postgres:
+    image: postgres:17
+    environment:
+      POSTGRES_DB: wubble
+      POSTGRES_USER: wubble
+      POSTGRES_PASSWORD: wubble
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+
+  mailpit:
+    image: axllent/mailpit
+    ports:
+      - "1025:1025"   # SMTP
+      - "8025:8025"   # веб-интерфейс
+
+volumes:
+  postgres-data:

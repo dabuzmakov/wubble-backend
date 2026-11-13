@@ -1,3 +1,5 @@
 <Solution>
   <Project Path="Wubble.Api/Wubble.Api.csproj" />
+  <Project Path="Wubble.AuthChecks/Wubble.AuthChecks.csproj" />
+  <Project Path="Wubble.MonitoringChecks/Wubble.MonitoringChecks.csproj" />
 </Solution>
