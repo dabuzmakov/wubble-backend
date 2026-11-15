@@ -60,8 +60,10 @@ using (var http = new HttpClient(new SocketsHttpHandler
     UseProxy = false,
     ConnectCallback = (_, _) => ValueTask.FromException<Stream>(new BlockedTargetException()),
 }))
+{
     Assert((await new HttpCheckExecutor(http).ExecuteAsync(probeCheck, default)).ErrorCode == "blocked_target",
         "Real SocketsHttpHandler preserves blocked-target classification");
+}
 
 var connection = Environment.GetEnvironmentVariable("WUBBLE_TEST_DB")
     ?? throw new InvalidOperationException("Set WUBBLE_TEST_DB to a dedicated PostgreSQL database.");
