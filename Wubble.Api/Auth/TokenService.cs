@@ -75,7 +75,9 @@ public sealed class TokenService(
 
         if (stored.ExpiresAt <= now || !stored.User.EmailConfirmed
             || stored.User.LockoutEnd > now)
+        {
             return AuthErrors.InvalidRefreshToken;
+        }
 
         var (next, rawNext) = CreateRefreshToken(stored.UserId, stored.FamilyId, now);
 
