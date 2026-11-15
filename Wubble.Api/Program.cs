@@ -32,6 +32,17 @@ var jwtOptionsBuilder = builder.Services.AddOptions<JwtOptions>()
 if (!isOpenApiGeneration)
     jwtOptionsBuilder.ValidateOnStart();
 
+var recaptchaOptionsBuilder = builder.Services
+    .AddOptions<RecaptchaOptions>()
+    .BindConfiguration(RecaptchaOptions.Section)
+    .Validate(
+        o => !string.IsNullOrWhiteSpace(o.SecretKey),
+        "Recaptcha:SecretKey is required.");
+
+if (!isOpenApiGeneration)
+    recaptchaOptionsBuilder.ValidateOnStart();
+
+builder.Services.AddHttpClient<RecaptchaVerifier>();
 builder.Services.AddOptions<AuthOptions>().BindConfiguration(AuthOptions.Section);
 builder.Services.AddOptions<CorsSettings>().BindConfiguration(CorsSettings.Section);
 builder.Services.AddOptions<EmailOptions>().BindConfiguration(EmailOptions.Section);
@@ -100,7 +111,9 @@ builder.Services.AddOptions<JwtBearerOptions>(JwtBearerDefaults.AuthenticationSc
                     || !Guid.TryParse(context.Principal?.FindFirst(AuthClaims.SessionId)?.Value, out var sessionId)
                     || !await context.HttpContext.RequestServices.GetRequiredService<TokenService>()
                         .IsSessionActiveAsync(userId, sessionId, context.HttpContext.RequestAborted))
+                {
                     context.Fail("Session has been revoked or expired.");
+                }
             },
         };
         options.TokenValidationParameters = new TokenValidationParameters
@@ -217,4 +230,4 @@ app.MapControllers();
 
 app.Run();
 
-public partial class Program { }
+
