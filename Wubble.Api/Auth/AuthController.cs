@@ -15,10 +15,12 @@ public sealed class AuthController(AuthService auth, AuthCookies cookies, Origin
     [ProducesResponseType<UserResponse>(StatusCodes.Status201Created)]
     [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict)]
-    public async Task<IActionResult> Register(RegisterRequest request, CancellationToken ct)
+    public async Task<IActionResult> Register(
+    RegisterRequest request,
+    CancellationToken ct)
     {
         if (!await recaptchaVerifier.IsValidAsync(
-        request.RecaptchaToken, ct))
+            request.RecaptchaToken, ct))
         {
             return Problem(
                 statusCode: StatusCodes.Status400BadRequest,
@@ -26,9 +28,15 @@ public sealed class AuthController(AuthService auth, AuthCookies cookies, Origin
         }
 
         var result = await auth.RegisterAsync(request, ct);
-        return result.Error is { } error
-            ? ToProblem(error)
-            : StatusCode(StatusCodes.Status201Created, result.Value);
+
+        if (result.Error is { } error)
+            return ToProblem(error);
+
+        cookies.Append(Response, result.Value!.Tokens);
+
+        return StatusCode(
+            StatusCodes.Status201Created,
+            result.Value.User);
     }
 
     /// <summary>Вход. Токены приходят в cookie wubble_access и wubble_refresh.</summary>
