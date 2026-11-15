@@ -37,7 +37,7 @@ public sealed class AuthCookies(IOptions<AuthOptions> options)
     {
         HttpOnly = false,
         Secure = true,
-        SameSite = SameSiteMode.Strict,
+        SameSite = SameSiteMode.None,
         Domain = string.IsNullOrWhiteSpace(_options.AccessTokenCookieDomain)
             ? null
             : _options.AccessTokenCookieDomain,
@@ -50,7 +50,7 @@ public sealed class AuthCookies(IOptions<AuthOptions> options)
     {
         HttpOnly = true,
         Secure = true,
-        SameSite = SameSiteMode.Strict,
+        SameSite = SameSiteMode.None,
         Path = RefreshTokenPath,
         Expires = expires,
         IsEssential = true,
