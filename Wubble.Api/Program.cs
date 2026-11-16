@@ -105,6 +105,18 @@ builder.Services.AddOptions<JwtBearerOptions>(JwtBearerDefaults.AuthenticationSc
         options.MapInboundClaims = false;
         options.Events = new JwtBearerEvents
         {
+            OnMessageReceived = context =>
+            {
+                // Сначала пробуем получить токен из Authorization.
+                // Если заголовка нет — читаем access-токен из cookie.
+                if (string.IsNullOrEmpty(context.Token))
+                {
+                    context.Token = context.Request.Cookies["wubble_access"];
+                }
+
+                return Task.CompletedTask;
+            },
+
             OnTokenValidated = async context =>
             {
                 if (!Guid.TryParse(context.Principal?.FindFirst(AuthClaims.UserId)?.Value, out var userId)
@@ -229,5 +241,4 @@ app.UseRateLimiter();
 app.MapControllers();
 
 app.Run();
-
 
