@@ -7,13 +7,16 @@ namespace Wubble.Api.Auth;
 /// Сервер access-токен из cookie НЕ читает — только из заголовка, поэтому CSRF через неё невозможен.
 /// Refresh-токен — HttpOnly cookie, уходит только на /api/auth.
 /// </summary>
-public sealed class AuthCookies(IOptions<AuthOptions> options)
+public sealed class AuthCookies(
+    IOptions<AuthOptions> options,
+    IWebHostEnvironment environment)
 {
     public const string AccessTokenName = "wubble_access";
     public const string RefreshTokenName = "wubble_refresh";
     private const string RefreshTokenPath = "/api/auth";
 
     private readonly AuthOptions _options = options.Value;
+    private readonly bool _isDevelopment = environment.IsDevelopment();
 
     public static string? ReadRefreshToken(HttpRequest request) =>
         request.Cookies[RefreshTokenName];
@@ -37,7 +40,7 @@ public sealed class AuthCookies(IOptions<AuthOptions> options)
     {
         HttpOnly = false,
         Secure = true,
-        SameSite = SameSiteMode.Strict,
+        SameSite = _isDevelopment ? SameSiteMode.None : SameSiteMode.Strict,
         Domain = string.IsNullOrWhiteSpace(_options.AccessTokenCookieDomain)
             ? null
             : _options.AccessTokenCookieDomain,
@@ -46,11 +49,11 @@ public sealed class AuthCookies(IOptions<AuthOptions> options)
         IsEssential = true,
     };
 
-    private static CookieOptions RefreshCookieOptions(DateTimeOffset? expires) => new()
+    private CookieOptions RefreshCookieOptions(DateTimeOffset? expires) => new()
     {
         HttpOnly = true,
         Secure = true,
-        SameSite = SameSiteMode.Strict,
+        SameSite = _isDevelopment ? SameSiteMode.None : SameSiteMode.Strict,
         Path = RefreshTokenPath,
         Expires = expires,
         IsEssential = true,

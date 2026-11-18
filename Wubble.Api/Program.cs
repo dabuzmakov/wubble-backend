@@ -158,7 +158,17 @@ builder.Services.AddOptions<MonitoringOptions>().BindConfiguration("Monitoring")
     .Validate(o => o.MaxConcurrentRuns is >= 1 and <= 50 && o.PollIntervalSeconds is >= 1 and <= 60,
         "Monitoring: MaxConcurrentRuns must be 1..50; PollIntervalSeconds must be 1..60.")
     .ValidateOnStart();
-builder.Services.AddSingleton<RunCapacity>();
+builder.Services.AddHttpClient<BrevoMailSender>();
+
+builder.Services.AddTransient<IMailSender>(sp =>
+{
+    var emailOptions = sp.GetRequiredService<IOptions<EmailOptions>>().Value;
+
+    if (!string.IsNullOrWhiteSpace(emailOptions.ApiKey))
+        return sp.GetRequiredService<BrevoMailSender>();
+
+    return ActivatorUtilities.CreateInstance<SmtpMailSender>(sp);
+});
 builder.Services.AddScoped<CheckRunner>();
 builder.Services.AddHttpClient<ICheckExecutor, HttpCheckExecutor>(client => client.Timeout = Timeout.InfiniteTimeSpan)
     .RemoveAllLoggers()
