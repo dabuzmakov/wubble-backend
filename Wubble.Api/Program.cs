@@ -169,6 +169,7 @@ builder.Services.AddTransient<IMailSender>(sp =>
 
     return ActivatorUtilities.CreateInstance<SmtpMailSender>(sp);
 });
+builder.Services.AddSingleton<RunCapacity>();
 builder.Services.AddScoped<CheckRunner>();
 builder.Services.AddHttpClient<ICheckExecutor, HttpCheckExecutor>(client => client.Timeout = Timeout.InfiniteTimeSpan)
     .RemoveAllLoggers()
