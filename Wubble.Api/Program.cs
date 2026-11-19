@@ -152,7 +152,7 @@ builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<EmailVerificationService>();
 builder.Services.AddSingleton<AuthCookies>();
 builder.Services.AddSingleton<OriginGuard>();
-builder.Services.AddSingleton<IMailSender, SmtpMailSender>();
+// builder.Services.AddSingleton<IMailSender, SmtpMailSender>();
 
 // ---------- Мониторинг ----------
 builder.Services.AddOptions<MonitoringOptions>().BindConfiguration("Monitoring")
