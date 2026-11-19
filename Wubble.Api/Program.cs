@@ -17,7 +17,8 @@ using System.Reflection;
 using Wubble.Api.Monitoring;
 
 var builder = WebApplication.CreateBuilder(args);
-
+var port = Environment.GetEnvironmentVariable("PORT") ?? "10000";
+builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
 // ---------- Настройки ----------
 // Валидация ключа — ValidateOnStart, а не чтение конфигурации прямо здесь:
 // генерация openapi.json при сборке (и в CI) поднимает приложение без секретов,
@@ -243,7 +244,7 @@ if (app.Environment.IsDevelopment())
     app.MapScalarApiReference();
 }
 
-app.UseHttpsRedirection();
+// app.UseHttpsRedirection();
 app.UseCors();
 app.UseAuthentication();
 app.UseAuthorization();
