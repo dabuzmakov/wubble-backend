@@ -16,7 +16,7 @@ public sealed class AuthService(
     IOptions<AuthOptions> options,
     TimeProvider time)
 {
-    public async Task<Result<UserResponse>> RegisterAsync(RegisterRequest request, CancellationToken ct)
+    public async Task<Result<AuthRegistration>> RegisterAsync(RegisterRequest request, CancellationToken ct)
     {
         var email = request.Email.Trim();
         var username = request.Username.Trim();
@@ -42,21 +42,26 @@ public sealed class AuthService(
             created = await users.CreateAsync(user, request.Password);
         }
         catch (DbUpdateException ex) when (ex.InnerException is PostgresException
-            { SqlState: PostgresErrorCodes.UniqueViolation, ConstraintName: "EmailIndex" })
+        { SqlState: PostgresErrorCodes.UniqueViolation, ConstraintName: "EmailIndex" })
         {
             return AuthErrors.EmailTaken;
         }
         catch (DbUpdateException ex) when (ex.InnerException is PostgresException
-            { SqlState: PostgresErrorCodes.UniqueViolation, ConstraintName: "UserNameIndex" })
+        { SqlState: PostgresErrorCodes.UniqueViolation, ConstraintName: "UserNameIndex" })
         {
             return AuthErrors.UsernameTaken;
         }
         if (!created.Succeeded)
             return MapIdentityErrors(created);
 
+        var issued = await tokens.IssueForNewSessionAsync(user, ct);
+
+        // Отправляем письмо, но не требуем подтверждения для входа.
         await verification.TrySendAsync(user, ct);
 
-        return UserResponse.From(user);
+        return new AuthRegistration(
+            UserResponse.From(user),
+            issued);
     }
 
     public async Task<Result<IssuedTokens>> LoginAsync(LoginRequest request, CancellationToken ct)
@@ -74,8 +79,6 @@ public sealed class AuthService(
             return AuthErrors.AccountLocked;
         if (!check.Succeeded)
             return AuthErrors.InvalidCredentials;
-        if (!user.EmailConfirmed)
-            return AuthErrors.EmailNotConfirmed;
 
         return await tokens.IssueForNewSessionAsync(user, ct);
     }
@@ -92,7 +95,7 @@ public sealed class AuthService(
         return user is null ? null : UserResponse.From(user);
     }
 
-    /// <returns>null при успехе. Повторное подтверждение уже подтверждённого email — тоже успех.</returns>
+    // null при успехе. Повторное подтверждение уже подтверждённого email — тоже успех.</returns>
     public async Task<AuthError?> VerifyEmailAsync(VerifyEmailRequest request)
     {
         var user = await users.FindByIdAsync(request.UserId.ToString());
@@ -116,12 +119,14 @@ public sealed class AuthService(
     public async Task ResendVerificationAsync(ResendVerificationRequest request, CancellationToken ct)
     {
         var user = await users.FindByEmailAsync(request.Email.Trim());
-        if (user is null || user.EmailConfirmed)
+        if (user?.EmailConfirmed is not false)
             return;
 
         if (user.LastVerificationEmailSentAt is { } lastSent
             && time.GetUtcNow() - lastSent < options.Value.VerificationEmailCooldown)
+        {
             return;
+        }
 
         await verification.TrySendAsync(user, ct);
     }

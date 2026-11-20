@@ -15,6 +15,9 @@ public sealed class RegisterRequest
 
     [Required, MinLength(8), MaxLength(128)]
     public string Password { get; init; } = "";
+
+    [Required, MaxLength(4096)]
+    public string RecaptchaToken { get; init; } = "";
 }
 
 public sealed class LoginRequest
@@ -24,6 +27,9 @@ public sealed class LoginRequest
 
     [Required, MaxLength(128)]
     public string Password { get; init; } = "";
+
+    [Required, MaxLength(4096)]
+    public string RecaptchaToken { get; init; } = "";
 }
 
 public sealed class VerifyEmailRequest

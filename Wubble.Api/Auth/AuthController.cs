@@ -7,7 +7,7 @@ namespace Wubble.Api.Auth;
 
 [ApiController]
 [Route("api/auth")]
-public sealed class AuthController(AuthService auth, AuthCookies cookies, OriginGuard originGuard) : ControllerBase
+public sealed class AuthController(AuthService auth, AuthCookies cookies, OriginGuard originGuard, RecaptchaVerifier recaptchaVerifier) : ControllerBase
 {
     /// <summary>Регистрация. Токены не выдаются — сначала нужно подтвердить email.</summary>
     [HttpPost("register")]
@@ -15,12 +15,28 @@ public sealed class AuthController(AuthService auth, AuthCookies cookies, Origin
     [ProducesResponseType<UserResponse>(StatusCodes.Status201Created)]
     [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict)]
-    public async Task<IActionResult> Register(RegisterRequest request, CancellationToken ct)
+    public async Task<IActionResult> Register(
+    RegisterRequest request,
+    CancellationToken ct)
     {
+        if (!await recaptchaVerifier.IsValidAsync(
+            request.RecaptchaToken, ct))
+        {
+            return Problem(
+                statusCode: StatusCodes.Status400BadRequest,
+                title: "reCAPTCHA verification failed.");
+        }
+
         var result = await auth.RegisterAsync(request, ct);
-        return result.Error is { } error
-            ? ToProblem(error)
-            : StatusCode(StatusCodes.Status201Created, result.Value);
+
+        if (result.Error is { } error)
+            return ToProblem(error);
+
+        cookies.Append(Response, result.Value!.Tokens);
+
+        return StatusCode(
+            StatusCodes.Status201Created,
+            result.Value.User);
     }
 
     /// <summary>Вход. Токены приходят в cookie wubble_access и wubble_refresh.</summary>
@@ -34,7 +50,12 @@ public sealed class AuthController(AuthService auth, AuthCookies cookies, Origin
     {
         if (!originGuard.IsAllowed(Request))
             return ToProblem(AuthErrors.ForbiddenOrigin);
-
+        if (!await recaptchaVerifier.IsValidAsync(request.RecaptchaToken, ct))
+        {
+            return Problem(
+                statusCode: StatusCodes.Status400BadRequest,
+                title: "reCAPTCHA verification failed.");
+        }
         var result = await auth.LoginAsync(request, ct);
         if (result.Error is { } error)
             return ToProblem(error);
@@ -125,8 +146,10 @@ public sealed class AuthController(AuthService auth, AuthCookies cookies, Origin
         {
             var modelState = new ModelStateDictionary();
             foreach (var (field, messages) in error.Errors)
+            {
                 foreach (var message in messages)
                     modelState.AddModelError(field, message);
+            }
 
             problem = ProblemDetailsFactory.CreateValidationProblemDetails(
                 HttpContext, modelState, error.StatusCode, error.Title);

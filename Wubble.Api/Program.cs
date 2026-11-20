@@ -17,7 +17,8 @@ using System.Reflection;
 using Wubble.Api.Monitoring;
 
 var builder = WebApplication.CreateBuilder(args);
-
+var port = Environment.GetEnvironmentVariable("PORT") ?? "10000";
+builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
 // ---------- Настройки ----------
 // Валидация ключа — ValidateOnStart, а не чтение конфигурации прямо здесь:
 // генерация openapi.json при сборке (и в CI) поднимает приложение без секретов,
@@ -32,6 +33,17 @@ var jwtOptionsBuilder = builder.Services.AddOptions<JwtOptions>()
 if (!isOpenApiGeneration)
     jwtOptionsBuilder.ValidateOnStart();
 
+var recaptchaOptionsBuilder = builder.Services
+    .AddOptions<RecaptchaOptions>()
+    .BindConfiguration(RecaptchaOptions.Section)
+    .Validate(
+        o => !string.IsNullOrWhiteSpace(o.SecretKey),
+        "Recaptcha:SecretKey is required.");
+
+if (!isOpenApiGeneration)
+    recaptchaOptionsBuilder.ValidateOnStart();
+
+builder.Services.AddHttpClient<RecaptchaVerifier>();
 builder.Services.AddOptions<AuthOptions>().BindConfiguration(AuthOptions.Section);
 builder.Services.AddOptions<CorsSettings>().BindConfiguration(CorsSettings.Section);
 builder.Services.AddOptions<EmailOptions>().BindConfiguration(EmailOptions.Section);
@@ -94,13 +106,27 @@ builder.Services.AddOptions<JwtBearerOptions>(JwtBearerDefaults.AuthenticationSc
         options.MapInboundClaims = false;
         options.Events = new JwtBearerEvents
         {
+            OnMessageReceived = context =>
+            {
+                // Сначала пробуем получить токен из Authorization.
+                // Если заголовка нет — читаем access-токен из cookie.
+                if (string.IsNullOrEmpty(context.Token))
+                {
+                    context.Token = context.Request.Cookies["wubble_access"];
+                }
+
+                return Task.CompletedTask;
+            },
+
             OnTokenValidated = async context =>
             {
                 if (!Guid.TryParse(context.Principal?.FindFirst(AuthClaims.UserId)?.Value, out var userId)
                     || !Guid.TryParse(context.Principal?.FindFirst(AuthClaims.SessionId)?.Value, out var sessionId)
                     || !await context.HttpContext.RequestServices.GetRequiredService<TokenService>()
                         .IsSessionActiveAsync(userId, sessionId, context.HttpContext.RequestAborted))
+                {
                     context.Fail("Session has been revoked or expired.");
+                }
             },
         };
         options.TokenValidationParameters = new TokenValidationParameters
@@ -126,13 +152,24 @@ builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<EmailVerificationService>();
 builder.Services.AddSingleton<AuthCookies>();
 builder.Services.AddSingleton<OriginGuard>();
-builder.Services.AddSingleton<IMailSender, SmtpMailSender>();
+// builder.Services.AddSingleton<IMailSender, SmtpMailSender>();
 
 // ---------- Мониторинг ----------
 builder.Services.AddOptions<MonitoringOptions>().BindConfiguration("Monitoring")
     .Validate(o => o.MaxConcurrentRuns is >= 1 and <= 50 && o.PollIntervalSeconds is >= 1 and <= 60,
         "Monitoring: MaxConcurrentRuns must be 1..50; PollIntervalSeconds must be 1..60.")
     .ValidateOnStart();
+builder.Services.AddHttpClient<BrevoMailSender>();
+
+builder.Services.AddTransient<IMailSender>(sp =>
+{
+    var emailOptions = sp.GetRequiredService<IOptions<EmailOptions>>().Value;
+
+    if (!string.IsNullOrWhiteSpace(emailOptions.ApiKey))
+        return sp.GetRequiredService<BrevoMailSender>();
+
+    return ActivatorUtilities.CreateInstance<SmtpMailSender>(sp);
+});
 builder.Services.AddSingleton<RunCapacity>();
 builder.Services.AddScoped<CheckRunner>();
 builder.Services.AddHttpClient<ICheckExecutor, HttpCheckExecutor>(client => client.Timeout = Timeout.InfiniteTimeSpan)
@@ -207,7 +244,7 @@ if (app.Environment.IsDevelopment())
     app.MapScalarApiReference();
 }
 
-app.UseHttpsRedirection();
+// app.UseHttpsRedirection();
 app.UseCors();
 app.UseAuthentication();
 app.UseAuthorization();
@@ -217,4 +254,3 @@ app.MapControllers();
 
 app.Run();
 
-public partial class Program { }

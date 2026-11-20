@@ -73,9 +73,10 @@ public sealed class TokenService(
             return AuthErrors.InvalidRefreshToken;
         }
 
-        if (stored.ExpiresAt <= now || !stored.User.EmailConfirmed
-            || stored.User.LockoutEnd > now)
+        if (stored.ExpiresAt <= now || stored.User.LockoutEnd > now)
+        {
             return AuthErrors.InvalidRefreshToken;
+        }
 
         var (next, rawNext) = CreateRefreshToken(stored.UserId, stored.FamilyId, now);
 
@@ -131,7 +132,7 @@ public sealed class TokenService(
         var now = time.GetUtcNow();
         return db.RefreshTokens.AsNoTracking().AnyAsync(t =>
             t.UserId == userId && t.FamilyId == familyId && t.RevokedAt == null
-            && t.ExpiresAt > now && t.User.EmailConfirmed
+            && t.ExpiresAt > now
             && (t.User.LockoutEnd == null || t.User.LockoutEnd <= now), ct);
     }
 

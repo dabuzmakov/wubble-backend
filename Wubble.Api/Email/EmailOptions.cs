@@ -14,6 +14,7 @@ public sealed class EmailOptions
 
     public string? Username { get; init; }
     public string? Password { get; init; }
+    public string? ApiKey { get; init; }
 
     public string FromAddress { get; init; } = "wubble@alisaboules.ru";
     public string FromName { get; init; } = "Wubble";
