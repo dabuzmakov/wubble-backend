@@ -8,6 +8,7 @@ Backend поддерживает авторизацию, HTTP-мониторин
 
 - [Запуск и HTTP-мониторинг](README_MONITORING.md)
 - [Авторизация и настройки почты](README_AUTH.md)
+- [Секреты: локальный запуск и Render](README_SECRETS.md)
 - [Примеры запросов](Wubble.Api/Monitoring.http)
 - [OpenAPI, сгенерированный из текущего кода](openapi.json)
 - [Результаты проверки](VALIDATION.md)
@@ -20,4 +21,5 @@ dotnet ef database update --project Wubble.Api
 dotnet run --project Wubble.Api --launch-profile https
 ```
 
-Для первого запуска PostgreSQL, Mailpit и JWT-секрета следуйте README_MONITORING.md.
+Перед первым запуском настройте User Secrets по [README_SECRETS.md](README_SECRETS.md).
+PostgreSQL и Mailpit описаны в README_MONITORING.md.

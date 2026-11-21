@@ -5,6 +5,11 @@
 
 # dotenv files
 .env
+.env.*
+!.env.example
+
+# Local secret files; development uses .NET User Secrets outside the repository.
+**/secrets.json
 
 # User-specific files
 *.rsuser
