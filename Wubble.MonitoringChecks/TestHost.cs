@@ -21,6 +21,7 @@ internal sealed class ApiFactory(string connection) : WebApplicationFactory<Wubb
         {
             ["ConnectionStrings:Default"] = connection,
             ["Jwt:SigningKey"] = "wubble-integration-tests-only-64-byte-key-01234567890123456789012345",
+            ["Recaptcha:SecretKey"] = "wubble-integration-tests-only",
             ["Monitoring:SchedulerEnabled"] = "false",
             ["Logging:LogLevel:Default"] = "Warning",
         }));

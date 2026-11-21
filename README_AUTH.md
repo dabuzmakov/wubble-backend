@@ -36,10 +36,12 @@ Rotation/logout/replay сериализованы транзакционной a
 Нужны .NET SDK 10, Docker, dotnet-ef версии 10.
 Из корня:
 
+Сначала настройте `ConnectionStrings:Default`, `Jwt:SigningKey` и
+`Recaptcha:SecretKey` в User Secrets по [README_SECRETS.md](README_SECRETS.md).
+
 ```sh
 docker compose up -d
 dotnet dev-certs https --trust
-dotnet user-secrets set 'Jwt:SigningKey' '<случайный секрет минимум 32 байта>' --project Wubble.Api
 dotnet tool restore
 dotnet restore Wubble.Api
 dotnet ef database update --project Wubble.Api
@@ -79,6 +81,7 @@ Web Locks/BroadcastChannel. На 409 дождитесь завершения ref
 
 - ConnectionStrings__Default — PostgreSQL.
 - Jwt__SigningKey — случайный секрет, минимум 32 байта.
+- Recaptcha__SecretKey — серверный секрет reCAPTCHA.
 - Auth__FrontendBaseUrl — HTTPS URL frontend.
 - Cors__AllowedOrigins__0 — точный origin frontend, без завершающего /.
 - Email__Host, Email__Port, Email__Security (StartTls или SslOnConnect),

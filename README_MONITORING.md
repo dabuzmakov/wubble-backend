@@ -20,13 +20,13 @@
 ## Запуск
 
 Требуются .NET SDK 10 и Docker. Команды выполняются из корня распакованного проекта.
+Сначала настройте User Secrets по [README_SECRETS.md](README_SECRETS.md).
 
 ```sh
 docker compose up -d
 dotnet tool restore
 dotnet restore Wubble.slnx
 dotnet dev-certs https --trust
-dotnet user-secrets set "Jwt:SigningKey" "<случайный секрет минимум 32 байта>" --project Wubble.Api
 dotnet ef database update --project Wubble.Api
 dotnet run --project Wubble.Api --launch-profile https
 ```
@@ -42,9 +42,10 @@ http://localhost:8025. Пока frontend не запущен, скопируйт
 После `/api/auth/login` возьмите JWT из `Set-Cookie: wubble_access=...` и вставьте
 его в Bearer-авторизацию Scalar. Маршруты мониторинга читают JWT только из заголовка.
 
-Параметры PostgreSQL и Mailpit для разработки уже есть в
-`appsettings.Development.json`. Для рабочего окружения задайте
-`ConnectionStrings__Default`, `Jwt__SigningKey` и SMTP-настройки из README_AUTH.md.
+Параметры Mailpit для разработки уже есть в `appsettings.Development.json`.
+Строка подключения PostgreSQL, JWT-ключ и секрет reCAPTCHA хранятся в User Secrets.
+Для рабочего окружения задайте `ConnectionStrings__Default`, `Jwt__SigningKey`,
+`Recaptcha__SecretKey` и настройки почты из README_AUTH.md.
 Письма отправляются от `wubble@alisaboules.ru`; в локальном режиме — в Mailpit.
 
 Миграция `AddMonitoring` добавляет Monitors, Checks, CheckResults, Incidents,

@@ -5,3 +5,8 @@
 .vs/
 .vscode/
 **/.DS_Store
+.env
+.env.*
+**/.env
+**/.env.*
+**/secrets.json
